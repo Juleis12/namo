@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Location Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="control-header">
+                <h1>Location Tracker</h1>
+                <button class="btn btn--primary btn--sm" id="refreshBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="m3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="form-group">
+                <label for="ntfyTopic" class="form-label">ntfy.sh Topic (optional)</label>
+                <input type="text" id="ntfyTopic" class="form-control" placeholder="my-location-topic">
+                <small style="color: var(--color-text-secondary); font-size: var(--font-size-xs);">
+                    Enter a topic name to receive push notifications
+                </small>
+            </div>
+            
+            <div class="status-display">
+                <div class="status-item">
+                    <span class="status-label">Status:</span>
+                    <span id="statusText" class="status--info status">Initializing...</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Last Update:</span>
+                    <span id="lastUpdate">Never</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Accuracy:</span>
+                    <span id="accuracy">Unknown</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Coordinates:</span>
+                    <span id="coordinates">Unknown</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div id="map" class="map-container"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
