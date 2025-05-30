@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Real-Time Location PWA</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1976d2">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f8fb; padding: 2em; }
+    #status, #coords { margin-top: 1em; }
+    #coords { font-size: 1.2em; }
+    button { margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <h1>Real-Time Location PWA</h1>
+  <button id="startBtn">Start Tracking</button>
+  <button id="stopBtn" disabled>Stop Tracking</button>
+  <div id="status"></div>
+  <div id="coords"></div>
+  <div id="instructions" style="color: #d32f2f; margin-top: 1em;"></div>
+
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+
+    let watchId = null;
+    const ntfyTopic = 'realtime-location-demo';
+
+    const statusDiv = document.getElementById('status');
+    const coordsDiv = document.getElementById('coords');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const instructions = document.getElementById('instructions');
+
+    function sendToNtfy(lat, lon, accuracy) {
+      const msg = `Live Location Update:
+Latitude: ${lat}
+Longitude: ${lon}
+Accuracy: ${accuracy} meters`;
+      fetch(`https://ntfy.sh/${ntfyTopic}`, {
+        method: 'POST',
+        body: msg,
+        headers: {
+          'Title': 'Real-Time Location',
+          'Tags': 'round_pushpin,globe_with_meridians',
+          'Content-Type': 'text/plain'
+        }
+      });
+    }
+
+    function showLocation(position) {
+      const lat = position.coords.latitude.toFixed(6);
+      const lon = position.coords.longitude.toFixed(6);
+      const accuracy = position.coords.accuracy.toFixed(1);
+      coordsDiv.innerHTML = `<b>Latitude:</b> ${lat}<br><b>Longitude:</b> ${lon}<br><b>Accuracy:</b> ${accuracy} meters`;
+      statusDiv.textContent = "Location updated and sent to ntfy.";
+      instructions.textContent = '';
+      sendToNtfy(lat, lon, accuracy);
+    }
+
+    function errorHandler(error) {
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          statusDiv.textContent = "Location access denied.";
+          instructions.innerHTML = `Please enable location permissions for this PWA in your browser or Android app settings.<br>
+          <b>How to:</b> Settings > Apps > [Your PWA Name] > Permissions > Allow Location`;
+          break;
+        case error.POSITION_UNAVAILABLE:
+          statusDiv.textContent = "Location unavailable.";
+          instructions.innerHTML = `Please ensure device location is enabled (Settings > Location), and try again.`;
+          break;
+        case error.TIMEOUT:
+          statusDiv.textContent = "Location request timed out.";
+          break;
+        default:
+          statusDiv.textContent = "An unknown error occurred.";
+          break;
+      }
+    }
+
+    // Permissions API: check and guide user
+    async function checkGeolocationPermission() {
+      if (!navigator.permissions) return;
+      try {
+        const result = await navigator.permissions.query({ name: "geolocation" });
+        if (result.state === "denied") {
+          instructions.innerHTML = `Location permission is denied.<br>
+          Please enable it in your browser or Android app settings.`;
+        }
+        result.onchange = () => {
+          if (result.state === "granted") instructions.textContent = '';
+        };
+      } catch (e) {}
+    }
+
+    startBtn.onclick = function() {
+      checkGeolocationPermission();
+      if (navigator.geolocation) {
+        statusDiv.textContent = "Requesting location access...";
+        watchId = navigator.geolocation.watchPosition(
+          showLocation,
+          errorHandler,
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+        );
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+      } else {
+        statusDiv.textContent = "Geolocation is not supported by this browser.";
+      }
+    };
+
+    stopBtn.onclick = function() {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        statusDiv.textContent = "Tracking stopped.";
+        coordsDiv.textContent = "";
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    };
+  </script>
+</body>
+</html>
