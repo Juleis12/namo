@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Location Map Viewer</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(45deg, #2c3e50, #3498db);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        opacity: 0.9;
+        font-size: 1.1rem;
+      }
+
+      .controls {
+        padding: 20px 30px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .input-field {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #2c3e50;
+      }
+      select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+        background-color: white;
+        cursor: pointer;
+        transition: border-color 0.3s;
+      }
+
+      select:focus {
+        outline: none;
+        border-color: #007bff;
+      }
+
+      select:disabled {
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+      }
+
+      .btn {
+        padding: 12px 24px;
+        background: linear-gradient(45deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        align-self: flex-end;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+      }
+
+      .btn:disabled {
+        background: #bdc3c7;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .config-section {
+        padding: 20px 30px;
+        background: #fff;
+        border-bottom: 1px solid #e9ecef;
+      }
+
+      .config-group {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .config-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .config-item input {
+        width: 200px;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      #map {
+        height: 600px;
+        width: 100%;
+      }
+
+      .status {
+        padding: 15px 30px;
+        background: #f8f9fa;
+        border-top: 1px solid #e9ecef;
+        font-size: 14px;
+        color: #6c757d;
+      }
+
+      .status.loading {
+        color: #3498db;
+      }
+
+      .status.error {
+        color: #e74c3c;
+        background: #fdf2f2;
+      }
+
+      .status.success {
+        color: #27ae60;
+        background: #f0f9ff;
+      }
+
+      .popup-content {
+        font-family: inherit;
+      }
+
+      .popup-content h3 {
+        margin: 0 0 8px 0;
+        color: #2c3e50;
+      }
+
+      .popup-content p {
+        margin: 4px 0;
+        color: #7f8c8d;
+      }
+
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 2rem;
+        }
+
+        .input-group {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .btn {
+          align-self: stretch;
+        }
+
+        #map {
+          height: 400px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🗺️ Location Explorer</h1>
+        <p>Discover and visualize locations from around the world</p>
+      </div>
+
+      <div class="config-section" hidden>
+        <label>API Base URL:</label>
+        <div class="config-group">
+          <div class="config-item">
+            <input
+              type="text"
+              id="apiUrl"
+              value="https://your-worker.workers.dev"
+              placeholder="Enter your Cloudflare Worker URL"
+            />
+          </div>
+          <button class="btn" onclick="loadAllLocations()">🔄 Refresh Map</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="input-group">
+          <div class="input-field">
+            <label for="locationName">Search Location by Name:</label>
+            <select id="locationName">
+              <option value="">Select a location...</option>
+            </select>
+          </div>
+          <button class="btn" onclick="searchLocation()">🔍 Search</button>
+        </div>
+      </div>
+
+      <div id="map"></div>
+
+      <div id="status" class="status" hidden>
+        Ready to load locations. Please set your API URL and click "Refresh Map".
+      </div>
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+
+    <script>
+      let map;
+      let markers = [];
+      let allLocations = [];
+
+      // Initialize the map
+      function initMap() {
+        map = L.map("map").setView([40.7128, -74.006], 3); // Default to New York, zoom level 3
+
+        // Add OpenStreetMap tiles
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap contributors",
+          maxZoom: 18,
+        }).addTo(map);
+      }
+
+      // Clear all markers from the map
+      function clearMarkers() {
+        markers.forEach((marker) => {
+          map.removeLayer(marker);
+        });
+        markers = [];
+      }
+
+      // Add marker to map
+      function addMarker(location) {
+        const marker = L.marker([location.latitude, location.longitude]).addTo(map).bindPopup(`
+                    <div class="popup-content">
+                        <h3>${location.name}</h3>
+                        <p><strong>Coordinates:</strong></p>
+                        <p>Latitude: ${location.latitude}</p>
+                        <p>Longitude: ${location.longitude}</p>
+                        ${
+                          location.created_at
+                            ? `<p><strong>Added:</strong> ${new Date(location.created_at).toLocaleDateString()}</p>`
+                            : ""
+                        }
+                    </div>
+                `);
+
+        markers.push(marker);
+        return marker;
+      }
+
+      // Update status message
+      function updateStatus(message, type = "") {
+        const statusEl = document.getElementById("status");
+        statusEl.textContent = message;
+        statusEl.className = `status ${type}`;
+      }
+
+      // Get API base URL
+      function getApiUrl() {
+        return "https://julie.vasdvasd011.workers.dev";
+      }
+      async function loadNames() {
+        const apiUrl = getApiUrl();
+        const response = await fetch(`${apiUrl}/names`);
+        const data = await response.json();
+
+        const select = document.getElementById("locationName");
+
+        data.names.forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          select.appendChild(option);
+        });
+      }
+
+      // Load all locations and display on map
+      async function loadAllLocations() {
+        try {
+          allLocations = [];
+
+          // Clear existing markers
+          clearMarkers();
+
+          if (allLocations.length === 0) {
+            updateStatus("No locations found. Add some locations using the API first.", "error");
+            return;
+          }
+
+          // Add markers for all locations
+          const bounds = [];
+          allLocations.forEach((location) => {
+            addMarker(location);
+            bounds.push([location.latitude, location.longitude]);
+          });
+
+          // Fit map to show all markers
+          if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [20, 20] });
+          }
+
+          updateStatus(`Successfully loaded ${allLocations.length} locations on the map.`, "success");
+        } catch (error) {
+          console.error("Error loading locations:", error);
+          updateStatus(`Error loading locations: ${error.message}`, "error");
+        }
+      }
+
+      // Search for specific location by name
+      async function searchLocation() {
+        const locationName = document.getElementById("locationName").value.trim();
+
+        if (!locationName) {
+          updateStatus("Please enter a location name to search.", "error");
+          return;
+        }
+
+        try {
+          updateStatus(`Searching for "${locationName}"...`, "loading");
+
+          const apiUrl = getApiUrl();
+          const response = await fetch(`${apiUrl}/locations/${encodeURIComponent(locationName)}`);
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              updateStatus(`No locations found with the name "${locationName}".`, "error");
+            } else {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return;
+          }
+
+          const data = await response.json();
+          const locations = data.locations || [];
+
+          // Clear existing markers
+          clearMarkers();
+
+          // Add markers for found locations
+          const bounds = [];
+          locations.forEach((location) => {
+            const marker = addMarker(location);
+            marker.openPopup(); // Open popup for searched locations
+            bounds.push([location.latitude, location.longitude]);
+          });
+
+          // Fit map to show all found markers
+          if (bounds.length > 0) {
+            if (bounds.length === 1) {
+              map.setView(bounds[0], 10); // Zoom closer for single location
+            } else {
+              map.fitBounds(bounds, { padding: [50, 50] });
+            }
+          }
+
+          updateStatus(`Found ${locations.length} location(s) named "${locationName}".`, "success");
+        } catch (error) {
+          console.error("Error searching location:", error);
+          updateStatus(`Error searching location: ${error.message}`, "error");
+        }
+      }
+
+      // Handle Enter key in search input
+      document.getElementById("locationName").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+          searchLocation();
+        }
+      });
+
+      // Handle Enter key in API URL input
+      document.getElementById("apiUrl").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+          loadAllLocations();
+        }
+      });
+
+      // Initialize the map when page loads
+      window.addEventListener("load", function () {
+        initMap();
+        loadNames();
+        loadAllLocations();
+      });
+    </script>
+  </body>
+</html>
